@@ -1,3 +1,4 @@
+
 import { Geist, Geist_Mono } from "next/font/google";
 import { CartProvider } from "../components/cart-provider";
 import "./globals.css";
@@ -14,7 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   title: "Quickbite | Good food, delivered quickly",
-  description: "Fresh finds and everyday favourites, delivered to your door in minutes.",
+  description:
+    "Fresh finds and everyday favourites, delivered to your door in minutes.",
 };
 
 export default function RootLayout({ children }) {
