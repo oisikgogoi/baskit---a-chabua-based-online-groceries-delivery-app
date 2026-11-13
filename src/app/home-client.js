@@ -1,13 +1,17 @@
+
 "use client";
 
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getIdTokenResult } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "../lib/firebase";
 
+import { db } from "../lib/firebase";
 import { useCart } from "../components/cart-provider";
 import { useAuth } from "../components/auth-provider";
+import DeliveryDashboardClient from "../components/delivery-dashboard-client";
 import LoadingImage from "../components/loading-image";
 import { useCatalog } from "../hooks/use-catalog";
 
@@ -60,6 +64,38 @@ function Icon({ name, size = 20 }) {
     );
   }
 
+  if (name === "home") {
+    return (
+      <svg {...shared}>
+        <path d="m3 10 9-7 9 7" />
+        <path d="M5 9v11h14V9" />
+        <path d="M9 20v-7h6v7" />
+      </svg>
+    );
+  }
+
+  if (name === "grid") {
+    return (
+      <svg {...shared}>
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+      </svg>
+    );
+  }
+
+  if (name === "package") {
+    return (
+      <svg {...shared}>
+        <path d="m12 3 9 5v8l-9 5-9-5V8l9-5Z" />
+        <path d="m3 8 9 5 9-5" />
+        <path d="M12 13v8" />
+        <path d="m7.5 5.5 9 5" />
+      </svg>
+    );
+  }
+
   if (name === "plus") {
     return (
       <svg {...shared}>
@@ -93,13 +129,19 @@ function Icon({ name, size = 20 }) {
 }
 
 export default function Home() {
+  const router = useRouter();
+
   const [activeCategory, setActiveCategory] = useState("All");
   const [search, setSearch] = useState("");
-  const [notice, setNotice] = useState("");
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [authError, setAuthError] = useState("");
   const [customerProfile, setCustomerProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
+
+  // Independently verify the delivery role from Firebase.
+  const [verifiedDeliveryRole, setVerifiedDeliveryRole] =
+    useState(false);
+  const [roleCheckLoading, setRoleCheckLoading] = useState(true);
 
   const {
     products,
@@ -120,6 +162,59 @@ export default function Home() {
     loginWithGoogle,
     logout,
   } = useAuth();
+
+  // Verify the actual Firebase custom claim.
+  useEffect(() => {
+    let active = true;
+
+    async function verifyDeliveryRole() {
+      setRoleCheckLoading(true);
+      setVerifiedDeliveryRole(false);
+
+      if (!user) {
+        if (active) {
+          setRoleCheckLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const tokenResult = await getIdTokenResult(user, true);
+
+        if (active) {
+          const isDelivery =
+            tokenResult.claims?.deliveryBoy === true;
+
+          setVerifiedDeliveryRole(isDelivery);
+
+          console.log("QuickBite role verification:", {
+            uid: user.uid,
+            email: user.email,
+            deliveryBoy: isDelivery,
+          });
+        }
+      } catch (error) {
+        console.error(
+          "Delivery role verification failed:",
+          error
+        );
+
+        if (active) {
+          setVerifiedDeliveryRole(false);
+        }
+      } finally {
+        if (active) {
+          setRoleCheckLoading(false);
+        }
+      }
+    }
+
+    verifyDeliveryRole();
+
+    return () => {
+      active = false;
+    };
+  }, [user?.uid]);
 
   // Load the customer's saved Firestore profile.
   useEffect(() => {
@@ -180,7 +275,7 @@ export default function Home() {
   });
 
   const cartItems = products.filter(
-    (product) => cart[product.id]
+    (product) => cart[String(product.id)]
   );
 
   const itemCount = Object.values(cart).reduce(
@@ -190,7 +285,7 @@ export default function Home() {
 
   const subtotal = cartItems.reduce(
     (total, product) =>
-      total + product.price * cart[product.id],
+      total + product.price * cart[String(product.id)],
     0
   );
 
@@ -235,11 +330,9 @@ export default function Home() {
   }
 
   function showCheckoutNotice() {
-    setNotice(
-      "Checkout preview only. Connect a backend to place a real order."
-    );
+    if (!isCartLoaded || itemCount === 0) return;
 
-    window.setTimeout(() => setNotice(""), 3800);
+    router.push("/checkout");
   }
 
   function scrollToProducts() {
@@ -248,10 +341,38 @@ export default function Home() {
       ?.scrollIntoView({ behavior: "smooth" });
   }
 
+  function scrollToCategories() {
+    document
+      .querySelector(".category-section")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function scrollToTop() {
+    document
+      .getElementById("top")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   function submitSearch(event) {
     event.preventDefault();
     setActiveCategory("All");
     scrollToProducts();
+  }
+
+  // Wait for Firebase authentication and role verification.
+  if (authLoading || (user && roleCheckLoading)) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-[#f7f8f5]">
+        <p className="text-sm font-medium text-gray-500">
+          Loading QuickBite...
+        </p>
+      </main>
+    );
+  }
+
+  // Only a verified delivery account gets the delivery dashboard.
+  if (user && verifiedDeliveryRole) {
+    return <DeliveryDashboardClient />;
   }
 
   return (
@@ -259,9 +380,9 @@ export default function Home() {
       <div className="announcement">
         <span className="announcement-sparkle">✳</span>
         A little less waiting, a lot more living.
-        <span className="announcement-right">
-          Free delivery over ₹299
-        </span>
+<span className="announcement-right">
+  Chabua Town · Under 10 km delivery
+</span>
       </div>
 
       <header className="site-header">
@@ -274,7 +395,6 @@ export default function Home() {
           </span>
         </a>
 
-        {/* Dynamic customer delivery address */}
         <Link
           className="location-button"
           href="/complete-profile"
@@ -330,7 +450,6 @@ export default function Home() {
           </button>
         </form>
 
-        {/* Account menu */}
         <div style={{ position: "relative" }}>
           <button
             className="account-button"
@@ -347,11 +466,9 @@ export default function Home() {
             </span>
 
             <span>
-              {authLoading
-                ? "Loading..."
-                : user
-                  ? user.displayName?.split(" ")[0] || "Account"
-                  : "Sign in"}
+              {user
+                ? user.displayName?.split(" ")[0] || "Account"
+                : "Sign in"}
             </span>
           </button>
 
@@ -420,7 +537,6 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Saved delivery address and GPS */}
                   <div
                     style={{
                       marginTop: "14px",
@@ -487,6 +603,31 @@ export default function Home() {
                       Update address and profile →
                     </Link>
                   </div>
+
+                  <Link
+                    href="/orders"
+                    onClick={() => setAccountMenuOpen(false)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      width: "100%",
+                      padding: "12px",
+                      marginTop: "12px",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "10px",
+                      color: "#202820",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      textDecoration: "none",
+                    }}
+                  >
+                    <span style={{ fontSize: "19px" }}>📦</span>
+                    My Orders
+                    <span style={{ marginLeft: "auto", color: "#278044" }}>
+                      →
+                    </span>
+                  </Link>
 
                   <hr
                     style={{
@@ -568,21 +709,20 @@ export default function Home() {
           )}
         </div>
 
-        <button
+        <Link
+          href="/cart"
           className="header-cart"
-          type="button"
-          onClick={scrollToProducts}
-          aria-label={`Cart, ${itemCount} items`}
+          aria-label={`My Cart, ${itemCount} items`}
         >
           <Icon name="cart" size={20} />
-          <span>Cart</span>
+          <span>My Cart</span>
 
           {itemCount > 0 && (
             <span className="header-cart-count">
               {itemCount}
             </span>
           )}
-        </button>
+        </Link>
       </header>
 
       <div className="header-rule" />
@@ -593,10 +733,10 @@ export default function Home() {
           aria-label="Quickbite delivery offer"
         >
           <div className="hero-copy">
-            <span className="hero-kicker">
-              <span className="live-dot" />
-              YOUR NEIGHBOURHOOD, ON SPEED DIAL
-            </span>
+<span className="hero-kicker">
+  <span className="live-dot" />
+  CHABUA TOWN · WITHIN 10 KM
+</span>
 
             <h1>
               Good food.
@@ -606,10 +746,10 @@ export default function Home() {
               <em>10 minutes.</em>
             </h1>
 
-            <p>
-              Fresh finds and everyday favourites, right when you
-              need them.
-            </p>
+<p>
+  Fresh finds and everyday favourites, delivered across
+  Chabua Town within a 10 km service radius.
+</p>
 
             <button
               className="hero-button"
@@ -659,8 +799,8 @@ export default function Home() {
               <Icon name="clock" size={18} />
             </span>
             <span>
-              <strong>At your door in 10</strong>
-              <small>Really, really quick</small>
+<strong>Under 10 km delivery</strong>
+<small>Serving Chabua Town and nearby areas</small>
             </span>
           </div>
 
@@ -948,12 +1088,12 @@ export default function Home() {
                       <div className="cart-item-copy">
                         <strong>{product.name}</strong>
                         <span>
-                          ₹{product.price} × {cart[product.id]}
+                          ₹{product.price} × {cart[String(product.id)]}
                         </span>
                       </div>
 
                       <div className="cart-item-total">
-                        ₹{product.price * cart[product.id]}
+                        ₹{product.price * cart[String(product.id)]}
                       </div>
 
                       <div className="cart-mini-quantity">
@@ -967,7 +1107,7 @@ export default function Home() {
                           <Icon name="minus" size={13} />
                         </button>
 
-                        <span>{cart[product.id]}</span>
+                        <span>{cart[String(product.id)]}</span>
 
                         <button
                           type="button"
@@ -1022,6 +1162,7 @@ export default function Home() {
                   className="checkout-button"
                   type="button"
                   onClick={showCheckoutNotice}
+                  disabled={!isCartLoaded}
                 >
                   Continue to checkout
                   <Icon name="arrow" size={17} />
@@ -1063,7 +1204,7 @@ export default function Home() {
             quickbite<span>.</span>
           </a>
 
-          <span>Good things, delivered quickly.</span>
+          <span>Good things, delivered within 10 km of Chabua Town.</span>
 
           <span className="footer-right">
             Made for your neighbourhood <span>✳</span>
@@ -1071,41 +1212,126 @@ export default function Home() {
         </footer>
       </div>
 
-      {itemCount > 0 && (
+      <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
         <button
-          className="mobile-cart-bar"
           type="button"
-          onClick={() =>
-            document
-              .querySelector(".cart-panel")
-              ?.scrollIntoView({ behavior: "smooth" })
-          }
+          className="mobile-nav-item"
+          onClick={scrollToTop}
+          aria-label="Go to home"
         >
-          <span>
-            <Icon name="cart" size={19} />
-            {itemCount} {itemCount === 1 ? "item" : "items"}
-          </span>
-
-          <strong>
-            View basket · ₹{total}
-            <Icon name="arrow" size={16} />
-          </strong>
+          <Icon name="home" size={21} />
+          <span>Home</span>
         </button>
-      )}
 
-      {notice && (
-        <div className="toast" role="status">
-          {notice}
+        <button
+          type="button"
+          className="mobile-nav-item"
+          onClick={scrollToCategories}
+          aria-label="Browse categories"
+        >
+          <Icon name="grid" size={21} />
+          <span>Categories</span>
+        </button>
 
-          <button
-            type="button"
-            onClick={() => setNotice("")}
-            aria-label="Dismiss message"
-          >
-            ×
-          </button>
-        </div>
-      )}
+        <Link
+          href="/orders"
+          className="mobile-nav-item"
+          aria-label="My Orders"
+        >
+          <Icon name="package" size={21} />
+          <span>My Orders</span>
+        </Link>
+
+        <Link
+          href="/cart"
+          className="mobile-nav-item"
+          aria-label={`My Cart, ${itemCount} items`}
+        >
+          <span className="mobile-nav-cart-icon">
+            <Icon name="cart" size={21} />
+            {itemCount > 0 && (
+              <span className="mobile-nav-count">
+                {itemCount}
+              </span>
+            )}
+          </span>
+          <span>My Cart</span>
+        </Link>
+      </nav>
+
+      <style jsx global>{`
+        .mobile-bottom-nav {
+          display: none;
+        }
+
+        @media (max-width: 700px) {
+          .mobile-bottom-nav {
+            position: fixed;
+            z-index: 999;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            align-items: center;
+            padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+            background: #ffffff;
+            border-top: 1px solid #e8ebe7;
+            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.07);
+          }
+
+          .mobile-bottom-nav .mobile-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            min-width: 0;
+            min-height: 44px;
+            padding: 3px 2px;
+            border: 0;
+            background: transparent;
+            color: #626b61;
+            text-decoration: none;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1.2;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+          }
+
+          .mobile-bottom-nav .mobile-nav-item:active {
+            color: #278044;
+          }
+
+          .mobile-nav-cart-icon {
+            position: relative;
+            display: inline-flex;
+          }
+
+          .mobile-nav-count {
+            position: absolute;
+            top: -7px;
+            right: -11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 16px;
+            height: 16px;
+            padding: 0 4px;
+            border-radius: 999px;
+            background: #278044;
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 800;
+          }
+
+          .page-shell {
+            padding-bottom: calc(90px + env(safe-area-inset-bottom));
+          }
+        }
+      `}</style>
     </main>
   );
 }

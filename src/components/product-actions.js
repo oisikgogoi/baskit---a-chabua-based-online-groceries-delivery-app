@@ -32,7 +32,7 @@ export default function ProductActions({ product }) {
 
   function buyNow() {
     changeQuantity(product.id, quantity);
-    router.push("/checkout");
+    router.push("/cart");
   }
 
   return (

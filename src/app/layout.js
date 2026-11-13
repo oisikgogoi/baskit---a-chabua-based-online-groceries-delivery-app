@@ -5,6 +5,8 @@ import { CartProvider } from "../components/cart-provider";
 import { AuthProvider } from "../components/auth-provider";
 import "./globals.css";
 
+import "leaflet/dist/leaflet.css";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

@@ -121,13 +121,8 @@ export default function LoginClient() {
             Your Google account is used for authentication.
           </p>
 
-          <div className="mt-7 text-center">
-            <Link
-              href="/"
-              className="text-sm font-semibold text-green-700 hover:text-green-800"
-            >
-              ← Back to shopping
-            </Link>
+          <div className="mt-7 text-center text-green-700 hover:text-green-800">
+            <b>Chabua Only!</b>
           </div>
         </section>
 
