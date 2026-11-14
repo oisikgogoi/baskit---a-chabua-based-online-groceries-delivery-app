@@ -56,6 +56,29 @@ function serializeDate(value) {
   return value?.toDate?.()?.toISOString() || null;
 }
 
+function getCustomerDetails(order) {
+  const customer = order.customer || {};
+
+  const phone =
+    customer.phone ||
+    customer.phoneNumber ||
+    customer.mobile ||
+    customer.mobileNumber ||
+    customer.contactNumber ||
+    order.customerPhone ||
+    order.customerPhoneNumber ||
+    order.phone ||
+    order.phoneNumber ||
+    order.mobile ||
+    order.mobileNumber ||
+    "";
+
+  return {
+    ...customer,
+    phone: String(phone || "").trim(),
+  };
+}
+
 // Read payment method from supported Firestore structures.
 function getPaymentMethod(order) {
   const candidates = [
@@ -150,7 +173,7 @@ export async function GET(request) {
       .map((order) => ({
         id: order.id,
         orderStatus: order.orderStatus || "placed",
-        customer: order.customer || {},
+        customer: getCustomerDetails(order),
         deliveryAddress: order.deliveryAddress || {},
         items: order.items || [],
 

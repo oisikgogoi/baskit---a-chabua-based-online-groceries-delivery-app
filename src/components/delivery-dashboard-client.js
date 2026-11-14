@@ -877,9 +877,25 @@ export default function DeliveryDashboardClient() {
                       </span>
                     </div>
 
-                    <p className="mt-2 text-sm text-gray-600">
-                      {order.customer?.name || "Customer"}
-                    </p>
+<div className="mt-2">
+  <p className="text-sm font-semibold text-gray-800">
+    {order.customer?.name || "Customer"}
+  </p>
+
+  {order.customer?.phone ? (
+    <a
+      href={`tel:${order.customer.phone}`}
+      onClick={(event) => event.stopPropagation()}
+      className="mt-2 inline-flex items-center gap-2 rounded-lg bg-green-100 px-3 py-2 text-sm font-semibold text-green-800 hover:bg-green-200"
+    >
+      📞 Call Customer: {order.customer.phone}
+    </a>
+  ) : (
+    <p className="mt-2 text-xs text-red-500">
+      Customer phone number unavailable
+    </p>
+  )}
+</div>
 
                     <p className="mt-1 text-sm text-gray-500">
                       {formatAddress(order.deliveryAddress)}
