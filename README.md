@@ -218,14 +218,16 @@ Potential areas of development include:
 
 ---
 
-## 👥 Founders & Contributors
+## 👨‍💻 Development Team
 
 QuickBite is developed and maintained by:
 
-| Contributor | Role |
+| Name | Role |
 |---|---|
-| **Gyanam Gogoi** | Developer |
-| **Oisik Gogoi** | Developer |
+| **Gyanam Gogoi** | Full-Stack Developer |
+| **Oisik Gogoi** | Full-Stack Developer |
+
+Both contributors are involved in the development of the QuickBite platform.
 
 ---
 
