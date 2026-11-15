@@ -1,37 +1,247 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# 🛒 QuickBite
 
-## Getting Started
+### Fresh Groceries. Fast Delivery. Easy Living.
 
-First, run the development server:
+QuickBite is a modern grocery delivery platform focused on making everyday shopping convenient, reliable, and accessible. Customers can browse grocery essentials, place orders, and track deliveries, while administrators and delivery personnel manage the complete order fulfillment process.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+QuickBite is being developed as a startup product with a focus on seamless shopping experiences, efficient operations, and reliable last-mile delivery.
+
+---
+
+## 🚀 Platform Overview
+
+QuickBite consists of three integrated systems:
+
+- **Customer Application** – A shopping platform where customers browse products, manage carts, place orders, and track deliveries.
+- **Admin Dashboard** – A centralized management platform for handling products, orders, and delivery personnel.
+- **Delivery Personnel System** – A dedicated interface for managing assigned deliveries, updating order statuses, and sharing live locations.
+
+---
+
+## ✨ Key Features
+
+### 🛍️ Customer Application
+
+- Google and Email/Password authentication.
+- Customer profile creation and management.
+- Browse grocery products by category.
+- Product search and discovery.
+- Shopping cart with quantity management.
+- Order placement and checkout.
+- Cash on Delivery (COD).
+- Order history and order details.
+- Real-time order status tracking.
+- Live delivery location tracking.
+- Customer address and location management.
+
+### 🖥️ Admin Dashboard
+
+- Secure administrator authentication.
+- Centralized order management.
+- Search and filter orders.
+- Update order statuses.
+- Assign and unassign delivery personnel.
+- View delivery personnel details.
+- Product management.
+- Add, edit, and delete products.
+- Product image uploads.
+- Manage product prices, categories, and stock.
+
+### 🚴 Delivery Personnel System
+
+- Dedicated delivery personnel authentication.
+- Role-based access control.
+- View assigned orders.
+- Access customer delivery details.
+- Update delivery progress.
+- Live GPS location sharing.
+- Cash on Delivery collection management.
+- Automatic removal of completed deliveries from active orders.
+
+---
+
+## 🛠️ Technology Stack
+
+| Technology | Usage |
+|---|---|
+| Next.js | Application framework |
+| React.js | User interface |
+| JavaScript | Application logic |
+| Tailwind CSS | Styling |
+| Firebase Authentication | Authentication |
+| Cloud Firestore | Database |
+| Firebase Admin SDK | Server-side operations |
+| Firebase Storage | File storage integration |
+| Cloudinary | Product image management |
+| Leaflet | Maps and location tracking |
+| Lucide React | Icons |
+
+---
+
+## 🏗️ Application Architecture
+
+QuickBite uses a separate customer application and admin dashboard connected to a shared Firebase backend.
+
+```text
+                 QUICKBITE PLATFORM
+                         |
+             +-----------+-----------+
+             |                       |
+      Customer App              Admin Dashboard
+             |                       |
+             +-----------+-----------+
+                         |
+                  Firebase Backend
+                         |
+          +--------------+--------------+
+          |              |              |
+       Firebase       Firestore      Firebase
+       Auth           Database       Admin SDK
+          |
+   Delivery Personnel
+       Interface
+          |
+     Live GPS Tracking
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## 📂 Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```text
+QuickBite/
+│
+├── quickbite/
+│   ├── app/
+│   ├── components/
+│   ├── context/
+│   ├── hooks/
+│   ├── lib/
+│   └── public/
+│
+└── quickbite-admin/
+    ├── app/
+    ├── components/
+    ├── lib/
+    └── public/
+```
 
-## Learn More
+The delivery personnel interface is integrated into the customer application with role-based access.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## ⚙️ Development Setup
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Prerequisites
 
-## Deploy on Vercel
+- Node.js (LTS)
+- npm
+- Firebase project access
+- Cloudinary account
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Customer Application
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# quickbite
+```bash
+git clone https://github.com/redux-next/quickbite.git
+
+cd quickbite
+
+npm install
+
+npm run dev
+```
+
+### Admin Dashboard
+
+```bash
+git clone https://github.com/redux-next/quickbite-admin.git
+
+cd quickbite-admin
+
+npm install
+
+npm run dev
+```
+
+### Environment Configuration
+
+Create a `.env.local` file in each application's root directory and configure the required credentials.
+
+Example Firebase client configuration:
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+```
+
+Additional server-side configuration may include:
+
+- Firebase Admin service account credentials.
+- Approved administrator email addresses.
+- Cloudinary credentials.
+- Other application-specific secrets.
+
+**Security:** Never commit `.env.local`, Firebase service account JSON files, private keys, or other sensitive credentials to version control.
+
+---
+
+## 🔐 Security & Access Control
+
+QuickBite implements security mechanisms designed to protect customer information and platform operations.
+
+- Firebase Authentication for account management.
+- Firebase Admin SDK for trusted server-side operations.
+- Secure session-cookie authentication for administrators.
+- Role-based access control for delivery personnel.
+- Protected administrative API routes.
+- Server-side order and payment validation.
+- Environment-based secret management.
+
+---
+
+## 📌 Development Roadmap
+
+QuickBite is an actively developed startup platform. Future development will focus on improving the customer experience, delivery operations, and platform capabilities.
+
+Potential areas of development include:
+
+- UPI and online payment integration.
+- Push notifications.
+- Promotional offers and discount management.
+- Customer ratings and reviews.
+- Advanced analytics and business reporting.
+- Delivery route optimization.
+
+---
+
+## 👥 Founders & Contributors
+
+QuickBite is developed and maintained by:
+
+| Contributor | Role |
+|---|---|
+| **Gyanam Gogoi** | Developer |
+| **Oisik Gogoi** | Developer |
+
+---
+
+## 🔒 Proprietary & Confidential
+
+© 2026 QuickBite. All rights reserved.
+
+QuickBite is a privately developed startup project. The source code, application architecture, designs, branding, business logic, and associated materials are proprietary.
+
+This repository is intended exclusively for authorized contributors and development purposes.
+
+Unauthorized copying, redistribution, modification, publication, or commercial use of any part of this project without prior written permission is prohibited.
+
+---
+
+<p align="center">
+  <b>QUICKBITE</b><br/>
+  Fresh Groceries. Fast Delivery. Easy Living.
+</p>
