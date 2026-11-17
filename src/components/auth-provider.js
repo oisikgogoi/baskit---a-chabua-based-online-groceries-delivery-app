@@ -13,6 +13,8 @@ import {
   onAuthStateChanged,
   signInWithPopup,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
   signOut,
 } from "firebase/auth";
 
@@ -46,7 +48,6 @@ export function AuthProvider({ children }) {
         }
 
         try {
-          // Force-refresh the token to get the latest custom claims.
           const tokenResult =
             await currentUser.getIdTokenResult(true);
 
@@ -54,10 +55,7 @@ export function AuthProvider({ children }) {
 
           setClaims(tokenResult.claims || {});
         } catch (error) {
-          console.error(
-            "Unable to load Firebase custom claims:",
-            error
-          );
+          console.error("Unable to load Firebase custom claims:", error);
 
           if (!active || requestId !== authRequest) return;
 
@@ -89,13 +87,33 @@ export function AuthProvider({ children }) {
     return result.user;
   }, []);
 
-  const loginWithEmail = useCallback(
-    async (email, password) => {
-      const result = await signInWithEmailAndPassword(
+  const loginWithEmail = useCallback(async (email, password) => {
+    const result = await signInWithEmailAndPassword(
+      auth,
+      email.trim(),
+      password
+    );
+
+    const tokenResult =
+      await result.user.getIdTokenResult(true);
+
+    setUser(result.user);
+    setClaims(tokenResult.claims || {});
+
+    return result.user;
+  }, []);
+
+  const registerWithEmail = useCallback(
+    async (name, email, password) => {
+      const result = await createUserWithEmailAndPassword(
         auth,
         email.trim(),
         password
       );
+
+      await updateProfile(result.user, {
+        displayName: name.trim(),
+      });
 
       const tokenResult =
         await result.user.getIdTokenResult(true);
@@ -146,6 +164,7 @@ export function AuthProvider({ children }) {
         isDeliveryBoy,
         loginWithGoogle,
         loginWithEmail,
+        registerWithEmail,
         refreshClaims,
         logout,
       }}
@@ -159,9 +178,7 @@ export function useAuth() {
   const context = useContext(AuthContext);
 
   if (!context) {
-    throw new Error(
-      "useAuth must be used inside AuthProvider"
-    );
+    throw new Error("useAuth must be used inside AuthProvider");
   }
 
   return context;
