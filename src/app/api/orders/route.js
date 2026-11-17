@@ -165,6 +165,7 @@ export async function POST(request) {
     // 4. Prepare Firestore references.
     const profileRef = adminDb.collection("users").doc(uid);
     const orderRef = adminDb.collection("orders").doc();
+    const cartRef = adminDb.collection("carts").doc(uid);
 
     const productRefs = requestedItems.map((item) =>
       adminDb.collection("products").doc(item.documentId)
@@ -340,6 +341,7 @@ export async function POST(request) {
         };
 
         transaction.set(orderRef, orderData);
+        transaction.delete(cartRef);
 
         return {
           orderId: orderRef.id,

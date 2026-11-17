@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "./auth-provider";
+import StorefrontLoading from "./storefront-loading";
 
 export default function AuthGate({ children }) {
   const { user, loading } = useAuth();
@@ -99,13 +100,17 @@ export default function AuthGate({ children }) {
   }, [user, loading, pathname, router]);
 
   if (loading || checkingProfile || !allowed) {
+    if (pathname === "/") {
+      return <StorefrontLoading />;
+    }
+
     return (
       <main className="min-h-screen flex items-center justify-center bg-[#f7faf7]">
         <div className="text-center">
           <div className="h-9 w-9 mx-auto rounded-full border-4 border-green-200 border-t-green-600 animate-spin" />
 
           <p className="mt-4 text-sm text-gray-500">
-            Checking your QuickBite account...
+            Loading QuickBite...
           </p>
         </div>
       </main>

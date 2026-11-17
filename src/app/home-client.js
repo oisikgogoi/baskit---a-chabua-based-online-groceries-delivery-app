@@ -12,7 +12,9 @@ import { db } from "../lib/firebase";
 import { useCart } from "../components/cart-provider";
 import { useAuth } from "../components/auth-provider";
 import DeliveryDashboardClient from "../components/delivery-dashboard-client";
+import DeleteAccountButton from "../components/delete-account-button";
 import LoadingImage from "../components/loading-image";
+import StorefrontLoading from "../components/storefront-loading";
 import { useCatalog } from "../hooks/use-catalog";
 
 function Icon({ name, size = 20 }) {
@@ -159,6 +161,8 @@ export default function Home() {
   const {
     user,
     loading: authLoading,
+    isAdmin,
+    isDeliveryBoy,
     loginWithGoogle,
     logout,
   } = useAuth();
@@ -341,18 +345,6 @@ export default function Home() {
       ?.scrollIntoView({ behavior: "smooth" });
   }
 
-  function scrollToCategories() {
-    document
-      .querySelector(".category-section")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  function scrollToTop() {
-    document
-      .getElementById("top")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
   function submitSearch(event) {
     event.preventDefault();
     setActiveCategory("All");
@@ -361,13 +353,7 @@ export default function Home() {
 
   // Wait for Firebase authentication and role verification.
   if (authLoading || (user && roleCheckLoading)) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-[#f7f8f5]">
-        <p className="text-sm font-medium text-gray-500">
-          Loading QuickBite...
-        </p>
-      </main>
-    );
+    return <StorefrontLoading />;
   }
 
   // Only a verified delivery account gets the delivery dashboard.
@@ -651,6 +637,12 @@ export default function Home() {
                   >
                     Sign out
                   </button>
+
+                  {!isAdmin && !isDeliveryBoy && (
+                    <DeleteAccountButton
+                      className="delete-account-button"
+                    />
+                  )}
                 </>
               ) : (
                 <>
@@ -835,6 +827,7 @@ export default function Home() {
 
         <section
           className="category-section"
+          id="categories"
           aria-labelledby="category-title"
         >
           <div className="section-heading category-heading">
@@ -1212,126 +1205,6 @@ export default function Home() {
         </footer>
       </div>
 
-      <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
-        <button
-          type="button"
-          className="mobile-nav-item"
-          onClick={scrollToTop}
-          aria-label="Go to home"
-        >
-          <Icon name="home" size={21} />
-          <span>Home</span>
-        </button>
-
-        <button
-          type="button"
-          className="mobile-nav-item"
-          onClick={scrollToCategories}
-          aria-label="Browse categories"
-        >
-          <Icon name="grid" size={21} />
-          <span>Categories</span>
-        </button>
-
-        <Link
-          href="/orders"
-          className="mobile-nav-item"
-          aria-label="My Orders"
-        >
-          <Icon name="package" size={21} />
-          <span>My Orders</span>
-        </Link>
-
-        <Link
-          href="/cart"
-          className="mobile-nav-item"
-          aria-label={`My Cart, ${itemCount} items`}
-        >
-          <span className="mobile-nav-cart-icon">
-            <Icon name="cart" size={21} />
-            {itemCount > 0 && (
-              <span className="mobile-nav-count">
-                {itemCount}
-              </span>
-            )}
-          </span>
-          <span>My Cart</span>
-        </Link>
-      </nav>
-
-      <style jsx global>{`
-        .mobile-bottom-nav {
-          display: none;
-        }
-
-        @media (max-width: 700px) {
-          .mobile-bottom-nav {
-            position: fixed;
-            z-index: 999;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            align-items: center;
-            padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
-            background: #ffffff;
-            border-top: 1px solid #e8ebe7;
-            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.07);
-          }
-
-          .mobile-bottom-nav .mobile-nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            min-width: 0;
-            min-height: 44px;
-            padding: 3px 2px;
-            border: 0;
-            background: transparent;
-            color: #626b61;
-            text-decoration: none;
-            font-family: inherit;
-            font-size: 11px;
-            font-weight: 700;
-            line-height: 1.2;
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-          }
-
-          .mobile-bottom-nav .mobile-nav-item:active {
-            color: #278044;
-          }
-
-          .mobile-nav-cart-icon {
-            position: relative;
-            display: inline-flex;
-          }
-
-          .mobile-nav-count {
-            position: absolute;
-            top: -7px;
-            right: -11px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 16px;
-            height: 16px;
-            padding: 0 4px;
-            border-radius: 999px;
-            background: #278044;
-            color: #ffffff;
-            font-size: 10px;
-            font-weight: 800;
-          }
-
-          .page-shell {
-            padding-bottom: calc(90px + env(safe-area-inset-bottom));
-          }
-        }
-      `}</style>
     </main>
   );
 }

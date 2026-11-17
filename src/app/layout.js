@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import AuthGate from "../components/auth-gate";
 import { CartProvider } from "../components/cart-provider";
 import { AuthProvider } from "../components/auth-provider";
+import MobileBottomNav from "../components/mobile-bottom-nav";
 import "./globals.css";
 
 import "leaflet/dist/leaflet.css";
@@ -32,7 +33,10 @@ export default function RootLayout({ children }) {
       <body className="min-h-full flex flex-col">
         <AuthProvider>
           <AuthGate>
-            <CartProvider>{children}</CartProvider>
+            <CartProvider>
+              <div className="app-content">{children}</div>
+              <MobileBottomNav />
+            </CartProvider>
           </AuthGate>
         </AuthProvider>
       </body>

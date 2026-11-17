@@ -12,10 +12,17 @@ import {
 
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../components/auth-provider";
+import DeleteAccountButton from "../../components/delete-account-button";
 
 export default function CompleteProfilePage() {
   const router = useRouter();
-  const { user, loading, logout } = useAuth();
+  const {
+    user,
+    loading,
+    logout,
+    isAdmin,
+    isDeliveryBoy,
+  } = useAuth();
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -464,6 +471,10 @@ export default function CompleteProfilePage() {
           >
             Sign out
           </button>
+
+          {!isAdmin && !isDeliveryBoy && (
+            <DeleteAccountButton className="w-full mt-3 rounded-xl border border-red-200 px-5 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60" />
+          )}
         </section>
       </div>
     </main>

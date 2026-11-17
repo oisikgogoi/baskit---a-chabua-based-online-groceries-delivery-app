@@ -1,4 +1,3 @@
-
 "use client";
 
 import {
@@ -7,11 +6,15 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
+import { useAuth } from "./auth-provider";
+
 const CartContext = createContext(null);
-const cartStorageKey = "quickbite-cart";
+const guestCartStorageKey = "quickbite-cart-guest";
+const legacyCartStorageKey = "quickbite-cart";
 
 function validateCart(savedCart) {
   if (
@@ -26,52 +29,204 @@ function validateCart(savedCart) {
     Object.entries(savedCart).filter(
       ([id, quantity]) =>
         typeof id === "string" &&
-        id.length > 0 &&
+        /^\d+$/.test(id) &&
         Number.isSafeInteger(quantity) &&
         quantity > 0
     )
   );
 }
 
+async function readResponse(response, fallbackMessage) {
+  let result;
+
+  try {
+    result = await response.json();
+  } catch (error) {
+    throw new Error(fallbackMessage, { cause: error });
+  }
+
+  if (
+    !result ||
+    typeof result !== "object" ||
+    !response.ok ||
+    result.success !== true
+  ) {
+    throw new Error(result?.message || fallbackMessage);
+  }
+
+  return result;
+}
+
 export function CartProvider({ children }) {
+  const { user, loading: authLoading } = useAuth();
   const [cart, setCart] = useState({});
   const [isLoaded, setIsLoaded] = useState(false);
+  const [cartOwner, setCartOwner] = useState(null);
+  const [syncError, setSyncError] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [saveAttempt, setSaveAttempt] = useState(0);
+  const saveQueue = useRef(Promise.resolve());
 
-  // Load the customer's saved cart from localStorage.
   useEffect(() => {
-    const timerId = window.setTimeout(() => {
+    let active = true;
+
+    setCart({});
+    setCartOwner(null);
+    setIsLoaded(false);
+    setSyncError("");
+
+    if (authLoading) {
+      return () => {
+        active = false;
+      };
+    }
+
+    async function loadCart() {
+      if (user) {
+        try {
+          const token = await user.getIdToken();
+          const response = await fetch("/api/cart", {
+            cache: "no-store",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          const result = await readResponse(
+            response,
+            "Unable to load your saved cart."
+          );
+
+          if (!active) return;
+
+          setCart(validateCart(result.cart));
+          setCartOwner(user.uid);
+          setIsLoaded(true);
+          return;
+        } catch (error) {
+          console.error("Unable to load the account cart:", error);
+
+          if (active) {
+            setSyncError(
+              "Unable to load your saved cart. Please retry."
+            );
+          }
+
+          return;
+        }
+      }
+
       try {
-        const savedCart = window.localStorage.getItem(cartStorageKey);
+        window.localStorage.removeItem(legacyCartStorageKey);
+        const savedCart = window.localStorage.getItem(
+          guestCartStorageKey
+        );
+        let guestCart = {};
 
         if (savedCart) {
-          const parsedCart = JSON.parse(savedCart);
-          setCart(validateCart(parsedCart));
+          try {
+            guestCart = validateCart(JSON.parse(savedCart));
+          } catch (error) {
+            console.error("Unable to parse the guest cart:", error);
+            window.localStorage.removeItem(guestCartStorageKey);
+          }
         }
-      } catch (error) {
-        console.error("Unable to load the saved cart.", error);
-      } finally {
+
+        if (!active) return;
+
+        setCart(guestCart);
+        setCartOwner("guest");
         setIsLoaded(true);
+      } catch (error) {
+        console.error("Unable to load the guest cart:", error);
+
+        if (active) {
+          setSyncError(
+            "Unable to load your saved cart. Please retry."
+          );
+        }
       }
-    }, 0);
-
-    return () => window.clearTimeout(timerId);
-  }, []);
-
-  // Keep the cart saved between visits and page refreshes.
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    try {
-      window.localStorage.setItem(
-        cartStorageKey,
-        JSON.stringify(cart)
-      );
-    } catch (error) {
-      console.error("Unable to save the cart.", error);
     }
-  }, [cart, isLoaded]);
 
-  // Add or remove product quantities.
+    loadCart();
+
+    return () => {
+      active = false;
+    };
+  }, [user, authLoading, loadAttempt]);
+
+  useEffect(() => {
+    const owner = user?.uid || "guest";
+
+    if (
+      !isLoaded ||
+      authLoading ||
+      cartOwner !== owner
+    ) {
+      return;
+    }
+
+    if (!user) {
+      try {
+        window.localStorage.setItem(
+          guestCartStorageKey,
+          JSON.stringify(cart)
+        );
+        setSyncError("");
+      } catch (error) {
+        console.error("Unable to save the guest cart:", error);
+        setSyncError("Unable to save your cart. Please retry.");
+      }
+
+      return;
+    }
+
+    let active = true;
+    const cartToSave = cart;
+    const timerId = window.setTimeout(() => {
+      saveQueue.current = saveQueue.current
+        .then(async () => {
+          const token = await user.getIdToken();
+          const response = await fetch("/api/cart", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ cart: cartToSave }),
+          });
+
+          await readResponse(
+            response,
+            "Unable to save your account cart."
+          );
+        })
+        .then(() => {
+          if (active) setSyncError("");
+        })
+        .catch((error) => {
+          console.error("Unable to save the account cart:", error);
+
+          if (active) {
+            setSyncError(
+              "Unable to save your account cart. Please retry."
+            );
+          }
+        });
+    }, 250);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timerId);
+    };
+  }, [
+    cart,
+    isLoaded,
+    cartOwner,
+    user,
+    authLoading,
+    saveAttempt,
+  ]);
+
   const changeQuantity = useCallback((productId, amount) => {
     const id = String(productId);
 
@@ -93,10 +248,17 @@ export function CartProvider({ children }) {
     });
   }, []);
 
-  // Clear the cart after a successful order.
   const clearCart = useCallback(() => {
     setCart({});
   }, []);
+
+  const retryCartSync = useCallback(() => {
+    if (isLoaded) {
+      setSaveAttempt((attempt) => attempt + 1);
+    } else {
+      setLoadAttempt((attempt) => attempt + 1);
+    }
+  }, [isLoaded]);
 
   const value = useMemo(
     () => ({
@@ -110,6 +272,14 @@ export function CartProvider({ children }) {
 
   return (
     <CartContext.Provider value={value}>
+      {syncError && (
+        <div className="cart-sync-notice" role="alert">
+          <span>{syncError}</span>
+          <button type="button" onClick={retryCartSync}>
+            Retry
+          </button>
+        </div>
+      )}
       {children}
     </CartContext.Provider>
   );
